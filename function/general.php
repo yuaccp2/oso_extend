@@ -2310,4 +2310,19 @@ function tep_get_category_tree($parent_id = '0', $spacing = '', $exclude = '', $
     return $category_tree_array;
   }
 
+/**
+* 
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function get_currency_list(){
+    $currency_query = tep_db_query("select * from " . TABLE_CURRENCIES);
+	$list = array();
+	while($row = tep_db_fetch_array($currency_query)){
+		$list[] = array('id' => $row['code'], 'text' => $row['title']);
+	}
+	return $list;
+}
 ?>

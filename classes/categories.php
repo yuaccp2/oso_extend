@@ -8,13 +8,18 @@
 * @copyright (c) 2003 osCommerce
 */
 Class categories extends tree{
-	public function categories(){
+
+	public function categories($all_access = false){
 		global $customer_group_id;
 
 		if(empty($customer_group_id)){
 			$customer_group_id = 'G';
 		}
-		$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c where products_group_access like "%'.$customer_group_id.'%"');
+		if($all_access){
+			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c');
+		}else{
+			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c where products_group_access like "%'.$customer_group_id.'%"');
+		}
 		while($row = tep_db_fetch_array($query)){
 			//设置树型结构数据
 			$this->set_node($row['categories_id'], $row['parent_id'], $row['categories_id']);
