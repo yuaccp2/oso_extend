@@ -1,6 +1,24 @@
 <?php
-	include('init.php');
+include('init.php');
 
+/**
+* 
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function get_category_primary_id($id){
+	$query = tep_db_query('select categories_id, parent_id from categories where categories_id = "'.$id.'"');
+	$info = tep_db_fetch_array($query);
+	if($info['parent_id'] > 0){
+		return get_category_primary_id($info['parent_id']);
+	}else{
+		return $info['categories_id'];
+	}
+}
+$type = $_GET['type'];
+if($type == 'product'){
 	$orders_ids = array('20126680','20127225','20127232','20127159','20127250','20127010','20127055','20127128','20127150');
 	$orders_values = array();
 	foreach ($orders_ids as $key => $val){
@@ -20,7 +38,19 @@
 		$discount = $product['products_discount'];
 		//$discount = '50';
 		//$price = number_format($price * 0.5, 2);
-		$sql = 'update products set products_price = "'.$price.'",products_discount = "'.$discount.'" where products_model = "'.$product['products_model'].'";';
+		//$sql = 'update products set products_price = "'.$price.'",products_discount = "'.$discount.'" where products_model = "'.$product['products_model'].'";';
 		echo $sql.'<br/>';
 	}
+}elseif($type == 'category'){
+	$obj_categories = new categories(true);
+
+	$sql = 'select * from categories where parent_id > 0 and primary_id = 0 #and categories_id = 888';
+	$query = tep_db_query($sql);
+	while($info = tep_db_fetch_array($query)){
+		$primary_id = get_category_primary_id($info['categories_id']);
+		//var_dump($primary_id );die();
+		$sql = 'update categories set primary_id = "'.$primary_id.'" where categories_id = "'.$info['categories_id'].'";';
+		echo $sql.'<br/>';
+	}
+}
 ?>

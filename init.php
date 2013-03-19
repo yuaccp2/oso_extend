@@ -3,11 +3,18 @@ $start_time = time();
 //error_reporting(0);
 @set_time_limit(0);
 
+//$server = 'localhost';
 //数据库连接
-define('DB_SERVER', '192.168.0.22'); // eg, localhost - should not be empty for productive servers
-define('DB_SERVER_USERNAME', 'espow');
-define('DB_SERVER_PASSWORD', 'dbuser');
-define('DB_DATABASE', 'espowcom_espow3');
+if(isset($server) && $server == 'localhost'){
+	define('DB_SERVER', 'localhost'); // eg, localhost - should not be empty for productive servers
+	define('DB_SERVER_USERNAME', 'espow');
+	define('DB_SERVER_PASSWORD', 'espow');
+}else{
+	define('DB_SERVER', '192.168.0.22'); // eg, localhost - should not be empty for productive servers
+	define('DB_SERVER_USERNAME', 'espow');
+	define('DB_SERVER_PASSWORD', 'dbuser');
+}
+	define('DB_DATABASE', 'espowcom_espow3');
 define('USE_PCONNECT', 'false'); // use persistent connections?
 define('STORE_SESSIONS', ''); // leave empty '' for default handler or set to 'mysql'
 //常量

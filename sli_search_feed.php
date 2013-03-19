@@ -129,10 +129,10 @@ while($c_info = tep_db_fetch_array($categories_top_query)){
 
 $where = '';
 if($debug){
-	//$where = ' and products_model = "EBABYCLH002" ';
+	$where = ' and products_model = "ECARDVR83" ';
 }
 
-$get_products_sql = 'SELECT DISTINCT p.products_id, cd.categories_id, pd.products_name, p.products_model, pd.products_description, p.products_image, cd.categories_name, p.products_price, p.products_status, p.products_new, p.products_discount, p.products_type, p.products_quantity 
+$get_products_sql = 'SELECT DISTINCT p.products_id, cd.categories_id, pd.products_name, p.products_model, pd.products_description, p.products_image, cd.categories_name, p.products_price, p.products_status, p.products_new, p.products_discount, p.products_type, p.products_quantity, products_free_shipping, products_discount
 FROM products AS p, products_description AS pd, products_to_categories AS ptc, categories_description AS cd 
 WHERE p.products_id = pd.products_id AND p.products_id = ptc.products_id AND ptc.categories_id = cd.categories_id AND pd.language_id ="1" AND cd.language_id ="1" '. $where .'
 GROUP BY p.products_model 
@@ -149,6 +149,8 @@ while($row = tep_db_fetch_array($get_products_query)){
 	$pro_str .= '<url>'. tep_href_link(FILENAME_PRODUCT_INFO, 'products_id='.$row['products_id'],'NONSSL',false) .'</url>' . "\n";
 	$pro_str .= '<id>' . $row['products_id'] . '</id>' . "\n";
 	$pro_str .= '<sku>' . $row['products_model'] . '</sku>' . "\n";
+	$pro_str .= '<free>' . ($row['products_free_shipping'] > 0 ? '1' : '0') . '</free>' . "\n";
+	$pro_str .= '<discount>' . $row['products_discount'] . '</discount>' . "\n";
 	$long_desc = strip_tags($row['products_description']);
 	$long_desc = XmlSafeStr($long_desc);
 	$short_desc = tep_clipped_string($long_desc,$needle=' ',$strlen='110');
@@ -195,17 +197,17 @@ while($row = tep_db_fetch_array($get_products_query)){
 	$attr_arr = array();
 	$pro_attr_str = '';
 	while($attr_row = tep_db_fetch_array($get_products_attr_query)){
-		if(strtolower($attr_row['products_options_name'])=='color'){
-			$attr_arr[] = $attr_row['options_value_name'];
-		}
+			if(empty($attr_row['products_options_name']) || empty($attr_row['options_value_name'])) continue;
+
+			$attr_arr[$attr_row['products_options_name']][] = $attr_row['options_value_name'];
 	}
 	if(!empty($attr_arr)){
 		$attr_value = '';
-		foreach($attr_arr as $value){
-			$attr_value .= $value . '|';
+		foreach($attr_arr as $_option => $_attrs){
+			$attr_value = join('|', $_attrs);
+			$_option = XmlSafeStr(str_replace(' ', '_', $_option));
+			$pro_attr_str .= '<'.$_option.'>' . XmlSafeStr($attr_value) . '</'.$_option.'>' . "\n";
 		}
-		$attr_value = rtrim($attr_value, '|');
-		$pro_attr_str .= '<color>' . XmlSafeStr($attr_value) . '</color>' . "\n";
 	}
 	$output_str .= $pro_str;
 	$output_str .= $pro_attr_str;
@@ -213,7 +215,9 @@ while($row = tep_db_fetch_array($get_products_query)){
 }
 	$output_str .= '</product_list>';
 if($debug){
+	echo $get_products_attr_sql.'<br/>';
 	echo $output_str;
+	file_put_contents('file/debug_sli_search_feed'.date('Ymd').'.xml',$output_str);
 }else{
 	file_put_contents('file/sli_search_feed'.date('YmdHis').'.xml',$output_str);
 }

@@ -16,9 +16,9 @@ Class categories extends tree{
 			$customer_group_id = 'G';
 		}
 		if($all_access){
-			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c');
+			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c order by c.parent_id,c.category_toptab');
 		}else{
-			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c where products_group_access like "%'.$customer_group_id.'%"');
+			$query = tep_db_query("select c.categories_id, c.parent_id from " . TABLE_CATEGORIES .' c where products_group_access like "%'.$customer_group_id.'%" order by category_toptab,categories_id,parent_id ');
 		}
 		while($row = tep_db_fetch_array($query)){
 			//设置树型结构数据
@@ -59,6 +59,22 @@ Class categories extends tree{
 		if(empty($_top_ids)) return 0;
 		reset($_top_ids);
 		return current($_top_ids);
+	}
+	/**
+	* 获取目录名称
+	* @authoer nathan 
+	* @access public 
+	* @param $id int 目录ID
+	* @return String
+	*/
+	function get_name($id){
+		global $customer_group_id, $languages_id;
+		if(empty($customer_group_id)){
+			$customer_group_id = 'G';
+		}
+		$query = tep_db_query("select categories_name from " . TABLE_CATEGORIES_DESCRIPTION .' left join '.TABLE_CATEGORIES.' using (categories_id) where products_group_access like "%'.$customer_group_id.'%" and categories_id ="'. (int)$id.'" and language_id="'. $languages_id.'"');
+		$info = tep_db_fetch_array($query);
+		return $info ? $info['categories_name'] : null;
 	}
 }
 ?>
