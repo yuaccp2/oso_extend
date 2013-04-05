@@ -69,7 +69,7 @@ function update_excel($file, $table, $cell_num ,$field_row_num = 1, $primary_key
 	}
 	unset($update_data, $field_names);
 	//file_put_contents(iconv('UTF-8', 'GBK','D:/yu/桌面/记录/接收/2013/产品价格20121303_sql.txt'),$sql);
-	file_put_contents($file_path.'.txt',$sql);
+	file_put_contents(iconv('UTF-8', 'GBK','D:/yu/桌面/记录/Excute_SQL/excelToSql/').basename($file_path).'.txt',$sql);
 	echo '<pre>';
 	echo "err rows:\n";
 	print_r($err);
@@ -79,5 +79,6 @@ function update_excel($file, $table, $cell_num ,$field_row_num = 1, $primary_key
 
 }
 //update_excel('D:/yu/桌面/记录/接收/2013/test130315.xls','',2);
-update_excel('D:/yu/桌面/记录/接收/2013/test_sheet2.xls', '', 6);
+//update_excel('D:/yu/桌面/记录/接收/2013/test_sheet2.xls', '', 6);
+update_excel('D:/yu/桌面/记录/Excute_SQL/excel/watch_phone_change20130403.xls', '', 3);
 ?>

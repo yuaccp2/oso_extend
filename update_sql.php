@@ -45,6 +45,7 @@ if($type == 'product'){
 	$obj_categories = new categories(true);
 
 	$sql = 'select * from categories where parent_id > 0 and primary_id = 0 #and categories_id = 888';
+	$sql = 'select * from categories where parent_id > 0';
 	$query = tep_db_query($sql);
 	while($info = tep_db_fetch_array($query)){
 		$primary_id = get_category_primary_id($info['categories_id']);

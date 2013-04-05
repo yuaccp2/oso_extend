@@ -6,6 +6,7 @@
 <?php
 echo 'Category: '.tep_draw_pull_down_menu('cid', tep_get_category_tree());
 echo '双引号:<input type="checkbox" name="marks"'.(isset($_GET['marks']) ? 'checked' : '').' >';
+echo '<br/>目录id：'	. tep_draw_input_field('category_ids');
 echo '<br/>目录名：'	. tep_draw_input_field('category_name');
 	if(isset($_GET['cid']) && $_GET['cid']){
 		$obj_categories = new categories(true);
@@ -40,6 +41,16 @@ echo '<br/>目录名：'	. tep_draw_input_field('category_name');
 			$cate_ids = $obj_categories->get_subcategories($rows['categories_id']);
 			echo '<br/>'.sprintf('%d : %s - %s', $rows['categories_id'], $rows['categories_name'],join(',',$cate_ids));
 		}
+	}elseif($_GET['category_ids']){
+		$obj_categories = new categories(true);
+		$arr = explode(',',$_GET['category_ids']);
+		$cids = array();
+		foreach ($arr as $key => $val){
+			$cate_ids = $obj_categories->get_subcategories($val);
+			$cids = array_merge($cids,$cate_ids);
+		}
+		echo '<br/>'.join(',',$cids);
+		unset($cate_ids,$cids);
 	}
 ?>
 

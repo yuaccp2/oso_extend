@@ -407,8 +407,11 @@ class PriceFormatter {
     function getRetailSinglePrice($rate){
 		global $currencies;
 		if ($this->hasSpecialPrice == true) {
-			//return $currencies->display_price($this->specialPrice *$rate,tep_get_tax_rate($this->taxClass)); alex 2011-7-27 modified
-			return $currencies->display_price($this->thePrice,tep_get_tax_rate($this->taxClass));
+			if($rate == PRODUCTS_RATE){
+				return $currencies->display_price($this->thePrice,tep_get_tax_rate($this->taxClass));
+			}
+
+			return $currencies->display_price($this->specialPrice *$rate,tep_get_tax_rate($this->taxClass)); //alex 2011-7-27 modified
 		}
 		if($this->hasCustomersGroupPrice=='true'){
 			return $currencies->display_price($this->customers_group_thePrice *$rate,tep_get_tax_rate($this->taxClass));

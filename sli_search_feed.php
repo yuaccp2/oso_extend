@@ -1,17 +1,43 @@
 <?php
+//var_dump(memory_limit,memory_get_usage(),memory_get_peak_usage());die();
 $start_time = time();
 //error_reporting(0);
-$debug = false;
+$debug = true;
 if($_SERVER['HTTP_HOST'] == 'web.com'){//本地为测试模式
 	$debug = true;
 }
-@set_time_limit(0);
-
+/**
+* 
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function show_txt($time){
+	echo time()-$time."\n";
+	//var_dump(error_get_last());
+}
+#ini_set('memory_limit', '512M');
+#ini_set('memory_limit', '256M');
+#set_time_limit(0);
+register_shutdown_function('show_txt',$start_time);
 //数据库连接
-define('DB_SERVER', '192.168.0.22'); // eg, localhost - should not be empty for productive servers
-define('DB_SERVER_USERNAME', 'espow');
-define('DB_SERVER_PASSWORD', 'dbuser');
-define('DB_DATABASE', 'espowcom_espow3');
+
+if(isset($_SERVER['SHELL'])){
+	$debug = false;
+	define('SLI_FILE_NAME', '/var/www/vhosts/espow.com/cli/extend/file/sli_search_feed.xml');
+	define('DB_SERVER', 'localhost');
+	define('DB_SERVER_USERNAME', 'edbcom');
+	define('DB_SERVER_PASSWORD', 'YK(j)&5H8R');
+	define('DB_DATABASE', 'espowcom_db');
+}else{
+	define('SLI_FILE_NAME', 'file/sli_search_feed'.date('YmdHis').'.xml');
+	define('DB_SERVER', '192.168.0.22'); // eg, localhost - should not be empty for productive servers
+	define('DB_SERVER_USERNAME', 'espow');
+	define('DB_SERVER_PASSWORD', 'dbuser');
+	define('DB_DATABASE', 'espowcom_espow3');
+}
+@unlink(SLI_FILE_NAME);
 define('USE_PCONNECT', 'false'); // use persistent connections?
 define('STORE_SESSIONS', ''); // leave empty '' for default handler or set to 'mysql'
 //常量
@@ -20,6 +46,7 @@ define('DIR_WS_HTTP_CATALOG', '/');
 define('FILENAME_PRODUCT_INFO', 'product_info.php');
 define('FILENAME_DOWNLOADS_CONTROLLER', 'downloads_controller.php');
 define('PRODUCTS_RATE','1.3');
+define('DEFAULT_CURRENCY','USD');
 //导入的文件
 require('database_tables.php');
 require('classes/tree.php');
@@ -118,6 +145,23 @@ function get_all_currencies_price($price, $separator = null){
 	return $currency_all_val;
 }
 
+/**
+* 
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function safe_write(&$str, $append = true){
+	if($append){
+		file_put_contents(SLI_FILE_NAME,$str, FILE_APPEND);
+	}else{
+		file_put_contents(SLI_FILE_NAME,$str);
+	}
+	echo strlen($str)."\n";
+	//unset($str);
+	$str = '';
+}
 $categories_name = array();
 $categories_top_sql = 'SELECT 	categories_id, categories_name FROM categories
 						LEFT JOIN categories_description USING(categories_id)
@@ -129,7 +173,7 @@ while($c_info = tep_db_fetch_array($categories_top_query)){
 
 $where = '';
 if($debug){
-	$where = ' and products_model = "ECARDVR83" ';
+	$where = ' and products_model = "EDMBOX2" ';
 }
 
 $get_products_sql = 'SELECT DISTINCT p.products_id, cd.categories_id, pd.products_name, p.products_model, pd.products_description, p.products_image, cd.categories_name, p.products_price, p.products_status, p.products_new, p.products_discount, p.products_type, p.products_quantity, products_free_shipping, products_discount
@@ -138,7 +182,7 @@ WHERE p.products_id = pd.products_id AND p.products_id = ptc.products_id AND ptc
 GROUP BY p.products_model 
 ORDER BY p.products_model';
 if($debug){
-	$get_products_sql .= ' limit 0,1';
+	$get_products_sql .= ' limit 0,100';
 }
 $get_products_query = tep_db_query($get_products_sql);
 while($row = tep_db_fetch_array($get_products_query)){
@@ -151,6 +195,12 @@ while($row = tep_db_fetch_array($get_products_query)){
 	$pro_str .= '<sku>' . $row['products_model'] . '</sku>' . "\n";
 	$pro_str .= '<free>' . ($row['products_free_shipping'] > 0 ? '1' : '0') . '</free>' . "\n";
 	$pro_str .= '<discount>' . $row['products_discount'] . '</discount>' . "\n";
+
+	$review_query = tep_db_query('SELECT COUNT(*) acount, SUM(reviews_rating) total FROM reviews left join reviews_description using(reviews_id) WHERE languages_id = '.$languages_id.' and products_id = '.$row['products_id'].' AND reviews_status = 1');
+	$review_info = tep_db_fetch_array($review_query);
+	$pro_str .= '<review_count>'.$review_info['acount'].'</review_count>'."\n";
+	$pro_str .= '<review_rate>'.($review_info['total'] ? floor($review_info['total'] / $review_info['acount']) : 0).'</review_rate>'."\n";
+
 	$long_desc = strip_tags($row['products_description']);
 	$long_desc = XmlSafeStr($long_desc);
 	$short_desc = tep_clipped_string($long_desc,$needle=' ',$strlen='110');
@@ -178,11 +228,11 @@ while($row = tep_db_fetch_array($get_products_query)){
 	$rate = $row['products_discount'] > 0 ? number_format((1/(1-$row['products_discount']/100)),2,'.','') : PRODUCTS_RATE;
 	$retail_price = $pf->getRetailSinglePrice($rate);
 	$out_price = $pf->getSinglePrice();
-
 	$pro_str .= '<price>' . $out_price . '</price>' . "\n";
 	$pro_str .= '<saleprice>' . $retail_price . '</saleprice>' . "\n";
 
 	$price_val = $pf->getSinglePriceValue();
+
 	$rate_price = tep_add_tax($price_val * $rate, 0);
 	$out_price = get_all_currencies_price($price_val, ' | ');
 	$retail_price = get_all_currencies_price($rate_price, ' | ');
@@ -205,22 +255,38 @@ while($row = tep_db_fetch_array($get_products_query)){
 		$attr_value = '';
 		foreach($attr_arr as $_option => $_attrs){
 			$attr_value = join('|', $_attrs);
-			$_option = XmlSafeStr(str_replace(' ', '_', $_option));
+			$_option = XmlSafeStr(str_replace(array(' ','\''), array('_'.''), $_option));
 			$pro_attr_str .= '<'.$_option.'>' . XmlSafeStr($attr_value) . '</'.$_option.'>' . "\n";
 		}
 	}
 	$output_str .= $pro_str;
 	$output_str .= $pro_attr_str;
 	$output_str .= '</product>' . "\n";
+	//echo memory_get_usage().'--'.memory_get_peak_usage().'<br/>';
+	//countTimer::check(5000,'safe_write',$output_str);
 }
 	$output_str .= '</product_list>';
 if($debug){
+	echo $get_products_sql.'<br/>';
 	echo $get_products_attr_sql.'<br/>';
 	echo $output_str;
-	file_put_contents('file/debug_sli_search_feed'.date('Ymd').'.xml',$output_str);
+	//file_put_contents('file/debug_sli_search_feed'.date('Ymd').'.xml',$output_str);
 }else{
-	file_put_contents('file/sli_search_feed'.date('YmdHis').'.xml',$output_str);
+	//file_put_contents('file/sli_search_feed'.date('YmdHis').'.xml',$output_str);
+	//safe_write($output_str);
+	safe_write($output_str,false);
 }
+	unset($get_products_query, $review_query,$get_products_attr_query, $output_str);
 echo '<br/>------------------------------------------------<br/>';
 echo time() - $start_time .'sec';
+class countTimer{
+	static $count = 0;
+	public static function check($val, $callback, &$str){
+		self::$count ++;
+		if(self::$count % $val == 0){
+			echo self::$count."\n";
+			$callback($str);
+		}
+	}
+}
 ?>

@@ -14,7 +14,7 @@ if(isset($server) && $server == 'localhost'){
 	define('DB_SERVER_USERNAME', 'espow');
 	define('DB_SERVER_PASSWORD', 'dbuser');
 }
-	define('DB_DATABASE', 'espowcom_espow3');
+define('DB_DATABASE', 'espowcom_espow3');
 define('USE_PCONNECT', 'false'); // use persistent connections?
 define('STORE_SESSIONS', ''); // leave empty '' for default handler or set to 'mysql'
 //常量
@@ -23,6 +23,9 @@ define('DIR_WS_HTTP_CATALOG', '/');
 define('FILENAME_PRODUCT_INFO', 'product_info.php');
 define('FILENAME_DOWNLOADS_CONTROLLER', 'downloads_controller.php');
 define('PRODUCTS_RATE','1.3');
+define('FILE_TEMPLATE_PATH',dirname(__file__).'/template/');
+define('GOOGLE_TEMPLATE_PATH', FILE_TEMPLATE_PATH . 'feed/');
+define('FILE_OUT_PATH',dirname(__file__).'/file/');
 //导入的文件
 require('database_tables.php');
 require('classes/tree.php');
