@@ -148,6 +148,8 @@ function insert_excel($file, $table, $cell_num ,$field_row_num = 1, $worksheet =
 
 //update_excel('D:/yu/桌面/记录/接收/2013/test130315.xls','',2);
 //update_excel('D:/yu/桌面/记录/接收/2013/test_sheet2.xls', '', 6);
+update_excel('D:/yu/桌面/记录/Excute_SQL/excel/products_free_fedex.xls', '', 2);
 //update_excel('D:/yu/桌面/记录/Excute_SQL/excel/watch_phone_change20130403.xls', '', 3);
-insert_excel('D:/yu/桌面/记录/资料/shippingCost/countries_express.xls', 'shipping_express', 5, 1, 1, false);
+//insert_excel('D:/yu/桌面/记录/资料/shippingCost/countries_express.xls', 'shipping_express', 5, 1, 1, false);
+//insert_excel('D:/yu/桌面/记录/资料/shippingCost/all_countries_express.xls', 'shipping_express', 5, 1, 1, false);
 ?>

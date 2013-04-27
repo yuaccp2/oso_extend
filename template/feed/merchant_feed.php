@@ -1,5 +1,5 @@
 <?
-set_time_limit(0);
+//set_time_limit(0);
 
 $id_subfix = '-'.$country.'01';
 $title = '';
@@ -39,10 +39,16 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 			$gid = $info['products_model'].'-'.$info['categories_id'];
 			$mpn = $gid . $info['categories_id'];
 		}
+
+		$url_language = '';
+		$country_language_arr = array('FR','ES','DE','RU');
+		if(in_array($country, $country_language_arr)){
+			$url_language = '&amp;language='.strtolower($country);
+		}
 ?>
 		<item> 
-			<title><?=XmlSafeStr(str_replace('!','',$info['products_name']))?></title> 
-			<link>http://www.espow.com/product_info.php?products_id=<?=$info['products_id']?>&amp;currency=<?=$currency?>&amp;gsc=googleshopping</link>
+			<title><?=match_output($info['products_model'], array('EDMBOX2','EDMBOX4'), 'dreambox')?> <?=XmlSafeStr(str_replace('!','',$info['products_name']))?></title> 
+			<link>http://www.espow.com/product_info.php?products_id=<?=$info['products_id']?>&amp;currency=<?=$currency?><?=$url_language?>&amp;gsc=googleshopping</link>
 			<description>
 				<?php 
 					if(!empty($info['products_description'])){
@@ -52,7 +58,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 					}
 				?>
 			</description>
-		    <g:google_product_category><?=$google_product_category[$info['primary_id']]?></g:google_product_category>
+		    <g:google_product_category><?=get_google_category($google_product_category, $info['categories_id'], $info['primary_id'])?></g:google_product_category>
 			<g:id><?=$gid?></g:id>
 			<g:condition>new</g:condition>
 			<g:price><?=$price .' '. $currency?></g:price>
@@ -72,7 +78,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 		?>
 			<g:brand><?='ESPOW'.$info['categories_id']?></g:brand>
 			<g:mpn><?=$mpn?></g:mpn>
-			<g:product_type><?=get_product_type($info['categories_id'])?><?//get_path($info['categories_id']);?></g:product_type>
+			<g:product_type><?=get_product_type($info['categories_id'], $country)?><?//get_path($info['categories_id']);?></g:product_type>
 		</item>
 <?php
 	}	
@@ -82,5 +88,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 <?php
 $cache_output = ob_get_contents();
 ob_end_clean();
-file_put_contents(FILE_OUT_PATH.$file_name.date('Ymd').'.xml', $cache_output);
+//file_put_contents(FILE_OUT_PATH.$file_name.date('Ymd').'.xml', $cache_output);
+$gz_handle = gzopen(FILE_OUT_PATH.$file_name.date('Ymd').'.xml.gz', 'w9');
+gzwrite($gz_handle, $cache_output);
+gzclose($gz_handle);
 ?>

@@ -76,5 +76,20 @@ Class categories extends tree{
 		$info = tep_db_fetch_array($query);
 		return $info ? $info['categories_name'] : null;
 	}
+	/**
+	* 
+	* @authoer nathan 
+	* @access public 
+	* @param 
+	* @return 
+	*/
+	function get_parent_all($id){
+		$result = array();
+		while($_cid = $this->get_parent($id)){
+			$result[] = $_cid;
+			$id = $_cid;
+		}
+		return $result;
+	}
 }
 ?>

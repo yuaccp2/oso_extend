@@ -183,15 +183,75 @@ function get_products_model($info, $tag){
 * @param 
 * @return 
 */
-function get_product_type($category_id){
-	global $obj_categories;
+function get_product_type($category_id, $country){
+	global $obj_categories,$languages_id;
+	$languages_id = 1;
 	$brand_parent_category =  array(21,73,1,314,3);//子目录属于品牌名称，故取上级目录名称
 	$cid = $obj_categories->get_parent($category_id);
 	if($cid && in_array($cid, $brand_parent_category)){
 		$category_id = $cid;
 	}
 	$name = $obj_categories->get_name($category_id);
-	return htmlentities($name);
+	return htmlentities($name).' '.$country;
+}
+/**
+* 获取目录ID数组
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function get_subcategories($category_ids){
+	global $obj_categories;
+	if(!is_array($category_ids)) $category_ids = array($category_ids);
+	$categories_id_arr = array();
+	foreach ($category_ids as $key => $val){
+		if(empty($val)) continue;
+		$ctmp = $obj_categories->get_subcategories($val);
+		$categories_id_arr = array_merge($ctmp, $categories_id_arr);
+	}
+	return $categories_id_arr;
+}
+/**
+* 
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function get_google_category($category, $cid, $prid = 0){
+	if(isset($category[$cid]) && $category[$cid]) return $category[$cid];
+	if($prid && isset($category[$prid])) return $category[$prid];
+	global $obj_categories;
+	$parents_arr = $obj_categories->get_parent_all($cid);
+	foreach ($category as $key => $val){
+		if(in_array($key, $parents_arr)){
+			return $val;
+		}
+	}
+	err::set_err('google category is not exist ->'.$cid.'  '.json_encode($parents_arr));
+	return '';
+}
+/**
+* 匹配输出
+* @authoer nathan 
+* @access public 
+* @param 
+* @return 
+*/
+function match_output($val, $match, $str){
+	if(!is_array($match)) $match = array($match);
+	if(in_array($val, $match)) return $str;
+	return '';
+}
+class err{
+	private static $err = array();
+	static function set_err($val){
+		self::$err[] = $val;
+	}
+	static function get_err(){
+		return self::$err;
+	}
 }
 /*----------------------------------------end 函数--------------------------------------------------------------*/
 
@@ -208,17 +268,20 @@ $debug = false;
 	$pf = new PriceFormatter;
 	$obj_categories = new categories();
 
-	//获取全部目录产品，除jammer
-    $categories_all_flag = false;
-
+	$where_arr = array();//条件
 	//入口
-	$country_code = 'CA';//
-
+	$country_code = 'FR';//
 
 	switch($country_code){
+		case 'US':
+		case 'UK':
+			$select_country = array('US','UK');
+			$languages_id = 1;
+			break;
+		case 'AU':
 		case 'CA':
-			$categories_ids = array(492,332,343,347,329,880,408,335,350);
-			$select_country = array('CA');
+			$select_country = array('AU','CA');
+			$where_arr[] = 'code_or_model =""';
 			$languages_id = 1;
 			break;
 		case 'DE':
@@ -226,10 +289,17 @@ $debug = false;
 			$languages_id = 5;
 			$select_country =array('DE');
 			break;
+		case 'ES':
+			$categories_ids = get_subcategories(array(523,340,688,742,442,372,770,409,734,444,842,412,748,574,687,3));
+			$where_arr[] = 'c.categories_id in ('.join(',', $categories_ids).')';
+			$select_country =array('ES');
+			$languages_id = 4;
+			break;
 		case 'FR':
-			$categories_ids = array('409','688','340','733','372','770','444','748','412','842','574');//fr
-			$languages_id = 3;
+			$categories_ids = get_subcategories(array(523,409,688,340,733,372,770,444,748,412,842,574,3));
+			$where_arr[] = 'c.categories_id in ('.join(',', $categories_ids).')';
 			$select_country =array('FR');
+			$languages_id = 3;
 			break;
 		default:
 			$select_country = array('US','AU','UK');
@@ -257,54 +327,15 @@ $debug = false;
 	$shipping_cost['reg'] = get_shipping_cost(MODULE_SHIPPING_REG_COST_1);
 	$shipping_cost['spec'] = get_shipping_cost(MODULE_SHIPPING_SPEC_COST_1);
 
-	/**
-	* POST 数据处理
-	*/
-	if($categories_all_flag){
-		$categories_id_arr = array();
-		//多个目录ID 逗号隔开
-		$category_exclude_id = array(681,702,645);
-		foreach ($category_exclude_id as $key => $val){
-			if(empty($val)) continue;
-			$ctmp = $obj_categories->get_subcategories($val);
-			$ctmp[] = $val;
-			$categories_id_arr = array_merge($ctmp, $categories_id_arr);
-		}
-
-		if(empty($categories_id_arr)){
-			echo 'Categori id is empty<br/>';
-			ajax_die();
-		}
-
-
-		$categories_id_str = join('","', $categories_id_arr);
-		$sql = 'select p.*, products_name, products_description,c.categories_id,primary_id from '. TABLE_PRODUCTS . ' p
-				left join '. TABLE_PRODUCTS_DESCRIPTION .' pd using(products_id) 
-				left join '. TABLE_PRODUCTS_TO_CATEGORIES . ' ptc on p.products_id = ptc.products_id 
-				left join '. TABLE_CATEGORIES . ' c on c.categories_id = ptc.categories_id 
-				where c.categories_id not in ("'.$categories_id_str.'") and products_quantity > 0 and products_status = 1 and products_price > 0 and pd.language_id = '.$languages_id.' and products_model not like "EPJAMMER%"';
-	//$sql .= ' group by products_model,code_or_model';
-	}else{
-		$categories_id_arr = array();
-		foreach ($categories_ids as $key => $val){
-			if(empty($val)) continue;
-			$ctmp = $obj_categories->get_subcategories($val);
-			$ctmp[] = $val;
-			$categories_id_arr = array_merge($ctmp, $categories_id_arr);
-		}
-
-		if(empty($categories_id_arr)){
-			echo 'Categori id is empty<br/>';
-			ajax_die();
-		}
-
-		$categories_id_str = join('","', $categories_id_arr);
-		$sql = 'select p.*, products_name, products_description,c.categories_id,primary_id from '. TABLE_PRODUCTS . ' p
-				left join '. TABLE_PRODUCTS_DESCRIPTION .' pd using(products_id) 
-				left join '. TABLE_PRODUCTS_TO_CATEGORIES . ' ptc on p.products_id = ptc.products_id 
-				left join '. TABLE_CATEGORIES . ' c on c.categories_id = ptc.categories_id 
-				where c.categories_id in ("'.$categories_id_str.'") and products_quantity > 0 and products_status = 1 and products_price > 0 and pd.language_id = '.$languages_id.' and products_model not like "EPJAMMER%"';
+	$where = '';
+	if($where_arr){
+		$where = ' and '.join(' and ', $where_arr);
 	}
+	$sql = 'select p.*, products_name, products_description,c.categories_id,primary_id from '. TABLE_PRODUCTS . ' p
+			left join '. TABLE_PRODUCTS_DESCRIPTION .' pd using(products_id) 
+			left join '. TABLE_PRODUCTS_TO_CATEGORIES . ' ptc on p.products_id = ptc.products_id 
+			left join '. TABLE_CATEGORIES . ' c on c.categories_id = ptc.categories_id 
+			where products_quantity > 0 and products_status = 1 and products_price > 0 and pd.language_id = '.$languages_id.' and products_model not like "EPJAMMER%"'.$where;
 
 	if($debug) $sql.= ' and p.products_id in (1300,56377,58815,62338)';
 	$query = tep_db_query($sql);
@@ -313,37 +344,79 @@ $debug = false;
 	/**
 	* 目录资料 取顶级目录资料
 	*/
-	$google_product_category = array(
-							'332'=>'Electronics &gt; Computers',
-							'343'=>'Vehicles &amp; Parts',
-							'347'=>'Home &amp; Garden &gt; Home Security',
-							'329'=>'Home &amp; Garden',
-							'350'=>'Sporting Goods &gt; Outdoor Recreation',
-							'408'=>'Electronics &gt; Electronics Accessories &gt; Power &gt; Chargers &gt; Solar Chargers',
-							'492'=>'Electronics &gt; Computers',
-							'681'=>'Cameras &amp; Optics &gt; Camera &amp; Optic Accessories &gt; Camera &amp; Optic Lens Accessories',
-							'902'=>'Health &amp; Beauty'
-							);
-    
+	if($languages_id == 2){
+	}elseif($languages_id == 3){
+		$google_product_category = array(
+								'3'=>'Appareils électroniques &gt; Accessoires électroniques &gt; Alimentation &gt; Batteries et piles &gt; Batteries pour ordinateurs portables',
+								'574'=>'Véhicules et accessoires &gt; Pièces détachées véhicules',
+								'842'=>'Vêtements et accessoires &gt; Sacs à main',
+								'412'=>'Arts et loisirs &gt; Loisirs et arts créatifs &gt; Travaux manuels et loisirs &gt; Dessin et peinture &gt; Peinture',
+								'748'=>'Appareils électroniques &gt; Accessoires électroniques &gt; Alimentation &gt; Batteries et piles',
+								'444'=>'Appareils photo, caméras et instruments d\'optique &gt; Accessoires pour appareils photo, caméras et instruments d\'optique &gt; Objectifs d\'appareils photo et d\'instruments d\'optique &gt; Objectifs de caméra de surveillance',
+								'770'=>'Entreprise et industrie &gt; Tatouages et piercings &gt; Matériel de tatouage',
+								'372'=>'Appareils électroniques &gt; Communications &gt; Accessoires pour interphone',
+								'733'=>'Appareils électroniques &gt; Réseaux &gt; Ponts et routeurs',
+								'340'=>'Appareils électroniques &gt; Communications &gt; Téléphonie &gt; Téléphones mobiles &gt; Smartphones',
+								'688'=>'Appareils électroniques &gt; Ordinateurs',
+								'409'=>'Appareils électroniques &gt; Accessoires électroniques &gt; Alimentation &gt; Chargeurs &gt; Chargeurs solaires',
+								'523'=>'Appareils électroniques &gt; Vidéo &gt; Télévision par câble et par satellite &gt; Récepteurs de télévision par satellite'
+								);
+	}elseif($languages_id == 4){
+		$google_product_category = array(
+								'3'=>'Electrónica &gt; Accesorios electrónicos &gt; Energía &gt; Baterías &gt; Baterías para portátiles',
+								'687'=>'Ropa y accesorios &gt; Disfraces y accesorios &gt; Pelucas',
+								'574'=>'Vehículos y recambios &gt; Piezas y accesorios para vehículos &gt; Vídeo y audio para coche',
+								'748'=>'Electrónica &gt; Accesorios electrónicos &gt; Energía &gt; Baterías',
+								'412'=>'Arte y ocio &gt; Hobbies y artes creativas &gt; Artesanía y aficiones &gt; Dibujo y pintura',
+								'842'=>'Ropa y accesorios &gt; Bolsos',
+								'444'=>'Casa y jardín &gt; Seguridad del hogar &gt; Cámaras y monitores de seguridad',
+								'734'=>'Equipamiento deportivo &gt; Actividades al aire libre &gt; Golf',
+								'409'=>'Electrónica &gt; Accesorios electrónicos &gt; Energía &gt; Cargadores &gt; Cargadores solares',
+								'770'=>'Economía e industria &gt; Piercings y tatuajes &gt; Instrumentos para tatuajes &gt; Máquinas para tatuajes',
+								'372'=>'Casa y jardín &gt; Decoración &gt; Puertas y ventanas &gt; Timbres',
+								'442'=>'Electrónica &gt; Vídeo &gt; Proyectores',
+								'742'=>'Óptica y fotografía &gt; Cámaras &gt; Cámaras de vigilancia',
+								'688'=>'Electrónica &gt; Ordenadores &gt; Tablets',
+								'340'=>'Electrónica &gt; Comunicación &gt; Telefonía &gt; Teléfonos móviles &gt; Teléfonos inteligentes',
+								'523'=>'Electrónica &gt; Vídeo &gt; Televisión por cable y satélite &gt; Receptores satélite'
+								);
+
+	}elseif($languages_id == 5){
+	}else{
+		$google_product_category = array(
+								'332'=>'Electronics &gt; Computers',
+								'343'=>'Vehicles &amp; Parts',
+								'347'=>'Home &amp; Garden &gt; Home Security',
+								'329'=>'Home &amp; Garden',
+								'350'=>'Sporting Goods &gt; Outdoor Recreation',
+								'408'=>'Electronics &gt; Electronics Accessories &gt; Power &gt; Chargers &gt; Solar Chargers',
+								'492'=>'Electronics &gt; Computers',
+								'681'=>'Cameras &amp; Optics &gt; Camera &amp; Optic Accessories &gt; Camera &amp; Optic Lens Accessories',
+								'902'=>'Health &amp; Beauty'
+								);
+	}
+
+
 	//按国家分类
 	$country_arr = array(
-			'US' => array('currency'=>'USD','country'=>'US'),
-			'AU' => array('currency'=>'AUD','country'=>'AU'),
-			'UK' => array('currency'=>'GBP' ,'country'=>'UK'),
-			'FR' => array('currency'=>'EUR' ,'country'=>'FR'),
-			'DE' => array('currency'=>'EUR' ,'country'=>'DE'),
-			'CA' => array('currency'=>'CAD' ,'country'=>'CA')
+			'US' => array('currency'=>'USD','country'=>'US','language_id'=>1),
+			'AU' => array('currency'=>'AUD','country'=>'AU','language_id'=>1),
+			'UK' => array('currency'=>'GBP' ,'country'=>'UK','language_id'=>1),
+			'FR' => array('currency'=>'EUR' ,'country'=>'FR','language_id'=>3),
+			'DE' => array('currency'=>'EUR' ,'country'=>'DE','language_id'=>5),
+			'ES' => array('currency'=>'EUR' ,'country'=>'ES','language_id'=>4),
+			'CA' => array('currency'=>'CAD' ,'country'=>'CA','language_id'=>1)
 	);
 
-	$languages_id = 1;//目录取英文资料
 
     foreach ($select_country as $key => $val){
+		$languages_id = $country_arr[$val]['language_id'];
 		$currency = $country_arr[$val]['currency'];
 		$country = $country_arr[$val]['country'];
-		if($categories_all_flag){
-			$file_name = 'ALLProduct'.$country.'Feed_';
+		if($where_arr){
+			$file_name = 'Product'.$country.'Feed_';
 		}else{
-			$file_name = 'Product'.$country.'Feed_'.join(',', $categories_ids).'_';
+			$file_name = 'ALLProduct'.$country.'Feed_';
 		}
 		include(GOOGLE_TEMPLATE_PATH.'merchant_feed.php');
 
@@ -354,4 +427,7 @@ $debug = false;
 	$costTime = microtime(true)-$startTime;
 	//header('location:./google_merchant_feed.php?time='.$costTime);exit();
 	echo $costTime / 60;
+	echo '<pre>';
+	print_r(err::get_err());
+	echo '</pre>';
  ?>

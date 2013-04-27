@@ -1,6 +1,18 @@
 <?php
 	include('init.php');
 	
+
+$result = array();
+$query = tep_db_query('select products_name,products_id from products_description where language_id = 3');
+while($row = tep_db_fetch_array($query)){
+	if($row['products_name'] == strtoupper($row['products_name'])){
+		$result[] = $row['products_id'];
+		//echo 'update products_description ';
+	}
+}
+echo count($result).'<br/>';
+echo join(',', $result);
+die();
 	$arr = array('ETATTOOM48','ETATTOOM46','ETATTOOM41','ETATTOOM10','ETATTOOM09','ETATTOOM04','ETATTOOM03','ETATTOOK75','ETATTOOK74','ETATTOOK57','ETATTOOK46','ETATTOOK39','ETATTOOK36','ETATTOOK32','ETATTOOK31','ETATTOOK30','ETATTOOK29','ETATTOOK28','ETATTOOK25','ETATTOOK24','ETATTOOK23','ETATTOOK22','ETATTOOK16','ETATTOOK12','ETATTOOK02','ETATTOOI04','ETABLETPC8','ETABLETA6','ETABLETA43','ETABLETA41','ETABLETA4','ESWIG044','ESWIG031');
 
 	$start_time = microtime(true);

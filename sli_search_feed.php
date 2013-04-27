@@ -196,7 +196,7 @@ while($row = tep_db_fetch_array($get_products_query)){
 	$pro_str .= '<free>' . ($row['products_free_shipping'] > 0 ? '1' : '0') . '</free>' . "\n";
 	$pro_str .= '<discount>' . $row['products_discount'] . '</discount>' . "\n";
 
-	$review_query = tep_db_query('SELECT COUNT(*) acount, SUM(reviews_rating) total FROM reviews left join reviews_description using(reviews_id) WHERE languages_id = '.$languages_id.' and products_id = '.$row['products_id'].' AND reviews_status = 1');
+	$review_query = tep_db_query('SELECT COUNT(*) acount, SUM(reviews_rating) total FROM reviews where products_id = '.$row['products_id'].' AND reviews_status = 1');
 	$review_info = tep_db_fetch_array($review_query);
 	$pro_str .= '<review_count>'.$review_info['acount'].'</review_count>'."\n";
 	$pro_str .= '<review_rate>'.($review_info['total'] ? floor($review_info['total'] / $review_info['acount']) : 0).'</review_rate>'."\n";
